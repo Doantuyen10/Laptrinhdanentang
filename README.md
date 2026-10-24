@@ -22,3 +22,4 @@ Xây dựng giao diện có một hiệu ứng chuyển động liên tục (nh�
 Tạo 2 nút bấm thực hiện cùng một tác vụ tính toán nặng (như tính toán thuật toán vòng lặp lớn hoặc đọc parse danh sách JSON dài):
 Nút 1: Chạy trực tiếp trên Main Thread (làm animation bị khựng/đơ tạm thời).
 Nút 2: Chạy qua hàm compute (animation vẫn quay mượt mà, không bị giật lag).
+*Note
