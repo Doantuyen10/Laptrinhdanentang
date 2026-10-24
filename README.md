@@ -10,7 +10,9 @@ Viết một hàm bao bọc (wrapper) để bắt và gom lỗi tập trung, hi�
 - Phải 2 người cùng lên thuyết trình
 - Chú ý nội dung trình bày slide để giải thích (Giống như giới thiệu kiến thức mới cho các bạn)
 - Ứng dụng demo có liên quan đến nội dung đã trình bày và đơn giản
+
 =====================================================================================================================================================================================
+
 Tuần 11 có Chủ đề 03: Xử lý tác vụ nặng với Isolate (Hàm compute) để giữ mượt giao diện
 Nội dung:
 Khái niệm nghẽn luồng giao diện (UI Jank/Freeze) khi xử lý dữ liệu nặng trên Main Thread.
