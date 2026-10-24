@@ -1,18 +1,10 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import 'heavy_tasks.dart';
+
 void main() {
   runApp(const ComputeDemoApp());
-}
-
-// Cùng một hàm xử lý CPU được dùng cho cả hai cách chạy.
-// Đặt ngoài class để compute() có thể gọi an toàn trong isolate.
-int heavyCalculation(int iterations) {
-  int checksum = 0;
-  for (int i = 0; i < iterations; i++) {
-    checksum = (checksum + (i * 31) % 97) % 1000000007;
-  }
-  return checksum;
 }
 
 class ComputeDemoApp extends StatelessWidget {
@@ -125,7 +117,10 @@ class _ComputeDemoPageState extends State<ComputeDemoPage>
   }
 
   Widget _resultTile(
-    String title, Duration? duration, int? result, int? iterations,
+    String title,
+    Duration? duration,
+    int? result,
+    int? iterations,
   ) {
     final time = duration == null
         ? 'Chưa chạy'
@@ -139,7 +134,9 @@ class _ComputeDemoPageState extends State<ComputeDemoPage>
           children: [
             Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 6),
-            Text('Số vòng lặp: ${iterations == null ? "—" : "${iterations ~/ 1000000} triệu"}'),
+            Text(
+              'Số vòng lặp: ${iterations == null ? "—" : "${iterations ~/ 1000000} triệu"}',
+            ),
             Text('Thời gian: $time'),
             Text('Kết quả: ${result ?? "—"}'),
           ],
@@ -224,9 +221,7 @@ class _ComputeDemoPageState extends State<ComputeDemoPage>
               ),
               const SizedBox(height: 10),
               FilledButton.tonalIcon(
-                onPressed: _isRunning
-                    ? null
-                    : () => _runTask(usingIsolate: true),
+                onPressed: _isRunning ? null : () => _runTask(usingIsolate: true),
                 icon: const Icon(Icons.bolt_rounded),
                 label: const Text('2. Chạy bằng Isolate (compute)'),
               ),

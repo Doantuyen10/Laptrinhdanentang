@@ -7,4 +7,3 @@ int heavyCalculation(int iterations) {
   }
   return checksum;
 }
- 

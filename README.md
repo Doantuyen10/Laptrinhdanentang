@@ -23,3 +23,9 @@ Tạo 2 nút bấm thực hiện cùng một tác vụ tính toán nặng (như 
 Nút 1: Chạy trực tiếp trên Main Thread (làm animation bị khựng/đơ tạm thời).
 Nút 2: Chạy qua hàm compute (animation vẫn quay mượt mà, không bị giật lag).
 *Note
+Phải 2 người cùng lên thuyết trình.
+- Slide trình bày cần làm rõ:
+  + Cơ chế hoạt động của Event Loop và Isolate trong Dart.
+  + Phân biệt `async/await` (không tạo thread mới) và `compute/Isolate` (tạo thread riêng).
+  + Điều kiện sử dụng `compute()`: Hàm xử lý phải là Top-level hoặc `static`.
+- Ứng dụng demo bám sát lý thuyết và dễ theo dõi.
