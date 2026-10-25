@@ -1,15 +1,15 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-
+ 
 import 'heavy_tasks.dart';
-
+ 
 void main() {
   runApp(const ComputeDemoApp());
 }
-
+ 
 class ComputeDemoApp extends StatelessWidget {
   const ComputeDemoApp({super.key});
-
+ 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -24,27 +24,35 @@ class ComputeDemoApp extends StatelessWidget {
     );
   }
 }
-
+ 
+enum TaskType { loop, json }
+ 
 class ComputeDemoPage extends StatefulWidget {
   const ComputeDemoPage({super.key});
-
+ 
   @override
   State<ComputeDemoPage> createState() => _ComputeDemoPageState();
 }
-
+ 
 class _ComputeDemoPageState extends State<ComputeDemoPage>
     with SingleTickerProviderStateMixin {
   late final AnimationController _rotationController;
   bool _isRunning = false;
   double _millions = 40;
+  TaskType _taskType = TaskType.loop;
   String _status = 'Chọn một nút để bắt đầu thử nghiệm.';
   Duration? _mainThreadTime;
   Duration? _isolateTime;
   int? _mainThreadResult;
   int? _isolateResult;
-  int? _mainThreadIterations;
-  int? _isolateIterations;
-
+  String? _mainThreadWorkload;
+  String? _isolateWorkload;
+ 
+  // Khối lượng hiển thị theo loại tác vụ đang chọn.
+  String get _currentWorkload => _taskType == TaskType.loop
+      ? '${_millions.round()} triệu vòng lặp'
+      : '${_millions.round() * 5} nghìn phần tử JSON';
+ 
   @override
   void initState() {
     super.initState();
@@ -53,53 +61,57 @@ class _ComputeDemoPageState extends State<ComputeDemoPage>
       duration: const Duration(seconds: 2),
     )..repeat();
   }
-
+ 
   @override
   void dispose() {
     _rotationController.dispose();
     super.dispose();
   }
-
+ 
   Future<void> _runTask({required bool usingIsolate}) async {
     if (_isRunning) return;
-
+ 
     setState(() {
       _isRunning = true;
       _status = usingIsolate
           ? 'Đang tính bằng Isolate (compute)...'
           : 'Đang tính trên Main Thread...';
     });
-
+ 
     try {
       // Cho giao diện có thời gian hiển thị trạng thái trước khi tính.
       await WidgetsBinding.instance.endOfFrame;
       await Future<void>.delayed(const Duration(milliseconds: 150));
       if (!mounted) return;
-
-      final int iterations = _millions.round() * 1000000;
+ 
+      // Cùng một tác vụ và cùng khối lượng cho cả hai cách chạy.
+      final bool isLoop = _taskType == TaskType.loop;
+      final int Function(int) task = isLoop ? heavyCalculation : jsonTask;
+      final int size = isLoop ? _millions.round() * 1000000 : _millions.round() * 5000;
+      final String workload = _currentWorkload;
       final stopwatch = Stopwatch()..start();
-
+ 
       final int result;
       if (usingIsolate) {
         // CPU chạy trong isolate khác, không chặn animation của UI.
-        result = await compute<int, int>(heavyCalculation, iterations);
+        result = await compute<int, int>(task, size);
       } else {
         // CPU chạy ngay trên main isolate, chặn việc vẽ frame UI.
-        result = heavyCalculation(iterations);
+        result = task(size);
       }
-
+ 
       stopwatch.stop();
       if (!mounted) return;
-
+ 
       setState(() {
         if (usingIsolate) {
           _isolateTime = stopwatch.elapsed;
           _isolateResult = result;
-          _isolateIterations = iterations;
+          _isolateWorkload = workload;
         } else {
           _mainThreadTime = stopwatch.elapsed;
           _mainThreadResult = result;
-          _mainThreadIterations = iterations;
+          _mainThreadWorkload = workload;
         }
         _status = usingIsolate
             ? 'Hoàn tất bằng Isolate: hiệu ứng vẫn có thể chạy mượt.'
@@ -115,17 +127,14 @@ class _ComputeDemoPageState extends State<ComputeDemoPage>
       }
     }
   }
-
+ 
   Widget _resultTile(
-    String title,
-    Duration? duration,
-    int? result,
-    int? iterations,
+    String title, Duration? duration, int? result, String? workload,
   ) {
     final time = duration == null
         ? 'Chưa chạy'
         : '${(duration.inMicroseconds / 1000000).toStringAsFixed(2)} giây';
-
+ 
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(14),
@@ -134,9 +143,7 @@ class _ComputeDemoPageState extends State<ComputeDemoPage>
           children: [
             Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 6),
-            Text(
-              'Số vòng lặp: ${iterations == null ? "—" : "${iterations ~/ 1000000} triệu"}',
-            ),
+            Text('Khối lượng: ${workload ?? "—"}'),
             Text('Thời gian: $time'),
             Text('Kết quả: ${result ?? "—"}'),
           ],
@@ -144,7 +151,7 @@ class _ComputeDemoPageState extends State<ComputeDemoPage>
       ),
     );
   }
-
+ 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -197,8 +204,28 @@ class _ComputeDemoPageState extends State<ComputeDemoPage>
                 style: const TextStyle(fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 24),
+              SegmentedButton<TaskType>(
+                segments: const [
+                  ButtonSegment(
+                    value: TaskType.loop,
+                    label: Text('Vòng lặp lớn'),
+                    icon: Icon(Icons.loop),
+                  ),
+                  ButtonSegment(
+                    value: TaskType.json,
+                    label: Text('Parse JSON dài'),
+                    icon: Icon(Icons.data_object),
+                  ),
+                ],
+                selected: {_taskType},
+                onSelectionChanged: _isRunning
+                    ? null
+                    : (selection) =>
+                        setState(() => _taskType = selection.first),
+              ),
+              const SizedBox(height: 16),
               Text(
-                'Khối lượng: ${_millions.round()} triệu vòng lặp',
+                'Khối lượng: $_currentWorkload',
                 style: const TextStyle(fontWeight: FontWeight.w600),
               ),
               Slider(
@@ -206,7 +233,7 @@ class _ComputeDemoPageState extends State<ComputeDemoPage>
                 min: 10,
                 max: 80,
                 divisions: 14,
-                label: '${_millions.round()} triệu',
+                label: _currentWorkload,
                 onChanged: _isRunning
                     ? null
                     : (value) => setState(() => _millions = value),
@@ -221,7 +248,9 @@ class _ComputeDemoPageState extends State<ComputeDemoPage>
               ),
               const SizedBox(height: 10),
               FilledButton.tonalIcon(
-                onPressed: _isRunning ? null : () => _runTask(usingIsolate: true),
+                onPressed: _isRunning
+                    ? null
+                    : () => _runTask(usingIsolate: true),
                 icon: const Icon(Icons.bolt_rounded),
                 label: const Text('2. Chạy bằng Isolate (compute)'),
               ),
@@ -234,13 +263,13 @@ class _ComputeDemoPageState extends State<ComputeDemoPage>
                 'Main Thread',
                 _mainThreadTime,
                 _mainThreadResult,
-                _mainThreadIterations,
+                _mainThreadWorkload,
               ),
               _resultTile(
                 'Isolate (compute)',
                 _isolateTime,
                 _isolateResult,
-                _isolateIterations,
+                _isolateWorkload,
               ),
               const SizedBox(height: 12),
               const Text(
@@ -254,4 +283,4 @@ class _ComputeDemoPageState extends State<ComputeDemoPage>
       ),
     );
   }
-}
+}s
