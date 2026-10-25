@@ -16,3 +16,9 @@ Future<void> performComputation() async {
   final int result = await Isolate.run(() => heavyTask(2000000000));
   print('Kết quả: $result');
 }
+
+void main() {
+  heavyTask(10000);
+  performComputation();
+  print('hello');
+}
