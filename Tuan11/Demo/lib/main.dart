@@ -87,7 +87,7 @@ class _ComputeDemoPageState extends State<ComputeDemoPage>
           isLoop ? _millions.round() * 1000000 : _millions.round() * 5000;
       final String workload = _currentWorkload;
       final stopwatch = Stopwatch()..start();
-
+// Sử dụng hàm compute để isolate
       final int result;
       if (usingIsolate) {
         if (isLoop) {
