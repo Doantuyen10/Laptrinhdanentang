@@ -15,3 +15,4 @@ Code vd và demo:
 - Tuyển: StatelessWidget, StatefulWidget, Container, Padding và demo
 Lưu ý:
 - Slide vừa phải không quá dài và quá ngắn.
+- Chạy code trong folder Ly_thuyet: flutter run -t lib/baseWidget.dart
