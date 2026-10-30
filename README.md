@@ -28,3 +28,14 @@ Nút 2: Chạy qua hàm compute (animation vẫn quay mượt mà, không bị g
 - Luồng dữ liệu có thể chia theo khối, chi theo luồng chạy dữ liệu
 - Nội dung tương tối, không ngắn quá, dài quá
 - Slide giống của thầy càng tốt, giống về background
+==========================================================================================================
+========================================================================
+
+Tuần 12 có Chủ đề 1: Cơ sở thiết kế bố cục giao diện trong Flutter 
+1. Cơ sở lý thuyết 
+Widget tree và nguyên tắc xây dựng giao diện theo thành phần. 
+Vai trò của StatelessWidget, StatefulWidget, Container, Padding, SizedBox, Row và Column. 
+Khoảng cách, căn chỉnh và khả năng tái sử dụng widget. 
+2. Yêu cầu thực hành và demo 
+Thiết kế một giao diện tự chọn sử dụng các widget bố cục phù hợp. 
+Giải thích cấu trúc widget và minh họa cách điều chỉnh bố cục. 
