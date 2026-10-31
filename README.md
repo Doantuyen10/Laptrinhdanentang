@@ -28,6 +28,7 @@ Nút 2: Chạy qua hàm compute (animation vẫn quay mượt mà, không bị g
 - Luồng dữ liệu có thể chia theo khối, chi theo luồng chạy dữ liệu
 - Nội dung tương tối, không ngắn quá, dài quá
 - Slide giống của thầy càng tốt, giống về background
+
 ====================================================================================================================================================================================
 
 Tuần 12 có Chủ đề 1: Cơ sở thiết kế bố cục giao diện trong Flutter 
