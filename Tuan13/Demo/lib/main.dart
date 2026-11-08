@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 
-void main() {
-  runApp(const MyApp());
-}
+void main() => runApp(const MyApp());
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -10,404 +8,330 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      title: 'Demo Chủ đề 5',
       debugShowCheckedModeBanner: false,
-      title: 'Demo Danh Sách & Lưới',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
-      ),
-      home: const ProductListScreen(),
+      theme: ThemeData(colorSchemeSeed: Colors.indigo, useMaterial3: true),
+      home: const HomePage(),
     );
   }
 }
 
-// Model dữ liệu mẫu (immutable)
-@immutable
-class Product {
-  final int id;
-  final String title;
-  final String description;
-  final double price;
-  final Color color;
-
-  const Product({
-    required this.id,
-    required this.title,
-    required this.description,
-    required this.price,
-    required this.color,
-  });
-}
-
-class ProductListScreen extends StatefulWidget {
-  const ProductListScreen({super.key});
+class HomePage extends StatelessWidget {
+  const HomePage({super.key});
 
   @override
-  State<ProductListScreen> createState() => _ProductListScreenState();
+  Widget build(BuildContext context) {
+    return DefaultTabController(
+      length: 5,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Danh sách, lưới và cuộn'),
+          bottom: const TabBar(
+            isScrollable: true,
+            tabs: [
+              Tab(text: 'SingleChild'),
+              Tab(text: 'ListView.builder'),
+              Tab(text: 'GridView'),
+              Tab(text: 'Cuộn lồng nhau'),
+              Tab(text: 'Danh sách rỗng'),
+            ],
+          ),
+        ),
+        body: const TabBarView(
+          children: [
+            SingleChildDemo(),
+            LazyListDemo(),
+            GridDemo(),
+            NestedScrollDemo(),
+            EmptyStateDemo(),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
-class _ProductListScreenState extends State<ProductListScreen> {
-  // Dữ liệu tĩnh: chỉ tạo 1 lần, không tạo lại mỗi lần gọi hàm
-  static final List<Color> _colors = [
-    Colors.blue.shade100,
-    Colors.green.shade100,
-    Colors.orange.shade100,
-    Colors.purple.shade100,
-    Colors.pink.shade100,
-  ];
+// ---------------------------------------------------------------
+// 1. SingleChildScrollView: phù hợp nội dung ngắn, ít phần tử.
+//    Toàn bộ widget con được build cùng lúc (không lazy).
+// ---------------------------------------------------------------
+class SingleChildDemo extends StatelessWidget {
+  const SingleChildDemo({super.key});
 
-  static const List<String> _descriptions = [
-    'Mô tả ngắn gọn.',
-    'Sản phẩm này có mô tả dài hơn một chút để kiểm tra hiển thị.',
-    'Mô tả rất chi tiết về sản phẩm: Chất liệu cao cấp, kiểu dáng hiện đại, độ bền vượt trội và phù hợp với nhiều mục đích sử dụng khác nhau.',
-  ];
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Thông tin sinh viên',
+              style: Theme.of(context).textTheme.headlineSmall),
+          const SizedBox(height: 12),
+          for (int i = 1; i <= 12; i++)
+            Card(
+              child: ListTile(
+                leading: CircleAvatar(child: Text('$i')),
+                title: Text('Mục thông tin số $i'),
+                subtitle: const Text('Dùng Column + SingleChildScrollView'),
+              ),
+            ),
+          const SizedBox(height: 8),
+          const Text(
+            'Lưu ý: với danh sách dài, KHÔNG nên dùng cách này vì tất cả '
+            'phần tử đều được dựng ngay → tốn bộ nhớ, giật lag.',
+            style: TextStyle(fontStyle: FontStyle.italic),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
-  static const int _initialCount = 10;
-  static const int _loadMoreCount = 6;
-  static const double _loadMoreThreshold = 200;
+// ---------------------------------------------------------------
+// 2. ListView.builder + lazy loading + tải thêm khi cuộn tới cuối.
+//    Các phần tử có kích thước khác nhau (độ dài văn bản khác nhau).
+// ---------------------------------------------------------------
+class LazyListDemo extends StatefulWidget {
+  const LazyListDemo({super.key});
 
-  final List<Product> _products = [];
-  final ScrollController _scrollController = ScrollController();
+  @override
+  State<LazyListDemo> createState() => _LazyListDemoState();
+}
 
-  bool _isGridView = false;
-  bool _isLoadingMore = false;
+class _LazyListDemoState extends State<LazyListDemo> {
+  final ScrollController _controller = ScrollController();
+  final List<int> _items = List.generate(20, (i) => i);
+  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    _loadInitialData();
-    _scrollController.addListener(_onScroll);
+    _controller.addListener(_onScroll);
+  }
+
+  void _onScroll() {
+    // Còn cách đáy 200px thì tải thêm
+    if (_controller.position.pixels >=
+            _controller.position.maxScrollExtent - 200 &&
+        !_isLoading) {
+      _loadMore();
+    }
+  }
+
+  Future<void> _loadMore() async {
+    setState(() => _isLoading = true);
+    await Future.delayed(const Duration(seconds: 1)); // giả lập gọi API
+    if (!mounted) return;
+    setState(() {
+      final start = _items.length;
+      _items.addAll(List.generate(20, (i) => start + i));
+      _isLoading = false;
+    });
   }
 
   @override
   void dispose() {
-    _scrollController
-      ..removeListener(_onScroll)
-      ..dispose();
+    _controller.dispose();
     super.dispose();
   }
 
-  // Lắng nghe cuộn để Lazy Loading
-  void _onScroll() {
-    if (_isLoadingMore || _products.isEmpty) return;
-    if (_scrollController.position.extentAfter < _loadMoreThreshold) {
-      _loadMoreData();
-    }
-  }
-
-  // Giả lập tải dữ liệu ban đầu
-  void _loadInitialData() {
-    setState(() {
-      _isLoadingMore = false;
-      _products
-        ..clear()
-        ..addAll(_generateMockData(startIndex: 1, count: _initialCount));
-    });
-  }
-
-  // Giả lập tải thêm dữ liệu khi cuộn
-  Future<void> _loadMoreData() async {
-    setState(() => _isLoadingMore = true);
-
-    await Future.delayed(const Duration(seconds: 1)); // Giả lập độ trễ mạng
-
-    // Tránh setState khi widget đã bị dispose
-    if (!mounted) return;
-
-    final newItems = _generateMockData(
-      startIndex: _products.length + 1,
-      count: _loadMoreCount,
-    );
-
-    setState(() {
-      _products.addAll(newItems);
-      _isLoadingMore = false;
-    });
-  }
-
-  List<Product> _generateMockData({
-    required int startIndex,
-    required int count,
-  }) {
-    return List.generate(count, (index) {
-      final id = startIndex + index;
-      return Product(
-        id: id,
-        title: 'Sản phẩm #$id',
-        description: _descriptions[id % _descriptions.length],
-        price: (id * 15.5) % 100 + 10,
-        color: _colors[id % _colors.length],
-      );
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Danh sách & Lưới Dữ liệu'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.delete_sweep),
-            tooltip: 'Xóa dữ liệu (Test Empty State)',
-            onPressed: () => setState(_products.clear),
-          ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            tooltip: 'Tải lại',
-            onPressed: _loadInitialData,
-          ),
-          IconButton(
-            icon: Icon(_isGridView ? Icons.view_list : Icons.grid_view),
-            tooltip: _isGridView ? 'Xem dạng Danh sách' : 'Xem dạng Lưới',
-            onPressed: () => setState(() => _isGridView = !_isGridView),
-          ),
-        ],
-      ),
-      body: RefreshIndicator(
-        onRefresh: () async => _loadInitialData(),
-        child: _products.isEmpty
-            ? _buildEmptyState()
-            // CustomScrollView + Slivers: các item chỉ được build khi lọt vào
-            // viewport (lazy thật sự), thay cho SingleChildScrollView + shrinkWrap
-            : CustomScrollView(
-                controller: _scrollController,
-                physics: const AlwaysScrollableScrollPhysics(),
-                slivers: [
-                  // Phần 1: Banner cuộn ngang
-                  SliverToBoxAdapter(child: _buildFeaturedSection()),
-
-                  const SliverToBoxAdapter(
-                    child: Padding(
-                      padding: EdgeInsets.all(16.0),
-                      child: Text(
-                        'Tất cả sản phẩm',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  // Phần 2: List hoặc Grid
-                  _isGridView ? _buildGridView() : _buildListView(),
-
-                  // Phần 3: Indicator khi đang Lazy Load
-                  if (_isLoadingMore)
-                    const SliverToBoxAdapter(
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(vertical: 20),
-                        child: Center(child: CircularProgressIndicator()),
-                      ),
-                    ),
-                ],
-              ),
-      ),
-    );
-  }
-
-  // 1. Empty State
-  Widget _buildEmptyState() {
-    return ListView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      children: [
-        SizedBox(
-          height: MediaQuery.sizeOf(context).height * 0.7,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.inbox_rounded, size: 80, color: Colors.grey.shade400),
-              const SizedBox(height: 16),
-              const Text(
-                'Danh sách hiện tại đang rỗng!',
-                style: TextStyle(
-                  fontSize: 18,
-                  color: Colors.grey,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              const SizedBox(height: 12),
-              ElevatedButton.icon(
-                onPressed: _loadInitialData,
-                icon: const Icon(Icons.refresh),
-                label: const Text('Tải lại dữ liệu'),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  // 2. Section cuộn ngang
-  Widget _buildFeaturedSection() {
-    return Container(
-      height: 120,
-      color: Colors.grey.shade100,
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        itemCount: 5,
-        itemExtent: 216, // 200 (width) + 16 (margin): bỏ bước đo kích thước
-        itemBuilder: (context, index) => _FeaturedBanner(index: index),
-      ),
-    );
-  }
-
-  // 3. Dạng danh sách (Sliver, không cần shrinkWrap)
-  Widget _buildListView() {
-    return SliverList.builder(
-      itemCount: _products.length,
+    return ListView.builder(
+      controller: _controller,
+      // +1 để hiển thị vòng tròn loading ở cuối danh sách
+      itemCount: _items.length + (_isLoading ? 1 : 0),
       itemBuilder: (context, index) {
-        final product = _products[index];
-        return _ProductListTile(key: ValueKey(product.id), product: product);
+        if (index == _items.length) {
+          return const Padding(
+            padding: EdgeInsets.all(16),
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+        final n = _items[index];
+        // Độ dài nội dung khác nhau → chiều cao phần tử khác nhau
+        final repeat = (n % 4) + 1;
+        return Card(
+          margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          child: ListTile(
+            leading: CircleAvatar(child: Text('${n + 1}')),
+            title: Text('Phần tử #${n + 1}'),
+            subtitle: Text('Nội dung mô tả. ' * repeat),
+          ),
+        );
       },
     );
   }
-
-  // 4. Dạng lưới (Sliver, không cần shrinkWrap)
-  Widget _buildGridView() {
-    return SliverPadding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      sliver: SliverGrid.builder(
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          crossAxisSpacing: 10,
-          mainAxisSpacing: 10,
-          childAspectRatio: 0.85,
-        ),
-        itemCount: _products.length,
-        itemBuilder: (context, index) {
-          final product = _products[index];
-          return _ProductGridTile(key: ValueKey(product.id), product: product);
-        },
-      ),
-    );
-  }
 }
 
-// ---------------------------------------------------------------------------
-// Các widget con tách riêng: Flutter bỏ qua rebuild nếu widget không đổi
-// ---------------------------------------------------------------------------
-
-class _FeaturedBanner extends StatelessWidget {
-  const _FeaturedBanner({required this.index});
-
-  final int index;
+// ---------------------------------------------------------------
+// 3. GridView.builder: hiển thị dữ liệu dạng lưới
+// ---------------------------------------------------------------
+class GridDemo extends StatelessWidget {
+  const GridDemo({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 8),
-      decoration: BoxDecoration(
-        color: Colors.deepPurple.shade300,
-        borderRadius: BorderRadius.circular(12),
+    final colors = Colors.primaries;
+    return GridView.builder(
+      padding: const EdgeInsets.all(12),
+      itemCount: 60,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3, // 3 cột
+        mainAxisSpacing: 10,
+        crossAxisSpacing: 10,
+        childAspectRatio: 1, // tỉ lệ rộng/cao
       ),
-      child: Center(
-        child: Text(
-          'Banner Nổi bật ${index + 1}',
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
+      itemBuilder: (context, index) {
+        final color = colors[index % colors.length];
+        return InkWell(
+          onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Bạn chọn ô số ${index + 1}'),
+              duration: const Duration(milliseconds: 800),
+            ),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ProductListTile extends StatelessWidget {
-  const _ProductListTile({super.key, required this.product});
-
-  final Product product;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      color: product.color,
-      child: Padding(
-        padding: const EdgeInsets.all(12.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          child: Container(
+            decoration: BoxDecoration(
+              color: color.shade300,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(
-                  product.title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-                Text(
-                  product.price.toStringAsFixed(2),
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.green,
-                  ),
-                ),
+                const Icon(Icons.image, color: Colors.white, size: 32),
+                const SizedBox(height: 4),
+                Text('Ô ${index + 1}',
+                    style: const TextStyle(color: Colors.white)),
               ],
             ),
-            const SizedBox(height: 6),
-            // Chiều cao tự thay đổi theo độ dài mô tả
-            Text(product.description),
-          ],
-        ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+// ---------------------------------------------------------------
+// 4. Cuộn lồng nhau: ListView ngang nằm trong cuộn dọc,
+//    và ListView dọc nằm trong SingleChildScrollView.
+// ---------------------------------------------------------------
+class NestedScrollDemo extends StatelessWidget {
+  const NestedScrollDemo({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.all(12),
+            child: Text('Danh sách cuộn ngang',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          ),
+          // Cuộn ngang: bắt buộc phải bọc trong SizedBox có chiều cao cố định
+          SizedBox(
+            height: 130,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              itemCount: 15,
+              itemBuilder: (context, i) => Container(
+                width: 110,
+                margin: const EdgeInsets.only(right: 10),
+                decoration: BoxDecoration(
+                  color: Colors.indigo.shade100,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Center(child: Text('Thẻ ${i + 1}')),
+              ),
+            ),
+          ),
+          const Padding(
+            padding: EdgeInsets.all(12),
+            child: Text('Danh sách cuộn dọc lồng bên trong',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          ),
+          // ListView lồng trong cuộn dọc:
+          //  - shrinkWrap: true  → ListView co theo nội dung
+          //  - NeverScrollableScrollPhysics → để cha xử lý cuộn
+          // (Cẩn thận hiệu năng: shrinkWrap sẽ build toàn bộ phần tử.
+          //  Với dữ liệu lớn nên dùng CustomScrollView + Slivers.)
+          ListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: 15,
+            itemBuilder: (context, i) => ListTile(
+              leading: const Icon(Icons.list),
+              title: Text('Dòng lồng nhau ${i + 1}'),
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _ProductGridTile extends StatelessWidget {
-  const _ProductGridTile({super.key, required this.product});
+// ---------------------------------------------------------------
+// 5. Xử lý trạng thái danh sách rỗng (tìm kiếm không có kết quả)
+// ---------------------------------------------------------------
+class EmptyStateDemo extends StatefulWidget {
+  const EmptyStateDemo({super.key});
 
-  final Product product;
+  @override
+  State<EmptyStateDemo> createState() => _EmptyStateDemoState();
+}
+
+class _EmptyStateDemoState extends State<EmptyStateDemo> {
+  final List<String> _all = [
+    'Flutter', 'Dart', 'Widget', 'ListView', 'GridView',
+    'Scroll', 'State', 'Provider', 'Material', 'Navigator',
+  ];
+  String _query = '';
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      color: product.color,
-      child: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: Colors.white54,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Center(child: Icon(Icons.shopping_bag, size: 40)),
-              ),
+    final filtered = _all
+        .where((e) => e.toLowerCase().contains(_query.toLowerCase()))
+        .toList();
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(12),
+          child: TextField(
+            decoration: const InputDecoration(
+              prefixIcon: Icon(Icons.search),
+              hintText: 'Tìm kiếm... (thử gõ "xyz")',
+              border: OutlineInputBorder(),
             ),
-            const SizedBox(height: 8),
-            Text(
-              product.title,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            Text(
-              product.description,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 12),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              product.price.toStringAsFixed(2),
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                color: Colors.green,
-              ),
-            ),
-          ],
+            onChanged: (v) => setState(() => _query = v),
+          ),
         ),
-      ),
+        Expanded(
+          child: filtered.isEmpty
+              ? const Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.inbox, size: 64, color: Colors.grey),
+                      SizedBox(height: 8),
+                      Text('Không tìm thấy kết quả',
+                          style: TextStyle(color: Colors.grey)),
+                    ],
+                  ),
+                )
+              : ListView.separated(
+                  itemCount: filtered.length,
+                  separatorBuilder: (_, __) => const Divider(height: 1),
+                  itemBuilder: (context, i) => ListTile(
+                    title: Text(filtered[i]),
+                  ),
+                ),
+        ),
+      ],
     );
   }
 }
